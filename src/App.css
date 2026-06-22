@@ -377,7 +377,9 @@ header p {
 }
 
 .result-header {
-  text-align: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 1.5rem;
 }
 
@@ -396,6 +398,149 @@ header p {
   content: '◆';
   font-size: 0.5rem;
   opacity: 0.6;
+}
+
+.btn-new {
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-family: 'Noto Serif SC', serif;
+  letter-spacing: 1px;
+}
+
+.btn-new:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* Sidebar Messages */
+.sidebar-messages {
+  flex: 1;
+  padding: 1rem;
+  overflow-y: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-hint {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1.8;
+}
+
+.sidebar-hint p {
+  margin-bottom: 0.5rem;
+}
+
+.sidebar-preview {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1.8;
+}
+
+.preview-latest {
+  font-size: 0.75rem;
+  opacity: 0.7;
+  margin-top: 0.5rem;
+}
+
+/* Followup Section */
+.followup-section {
+  background: var(--bg-card);
+  padding: 2rem;
+  border: 1px solid var(--border);
+  margin-top: 2rem;
+  position: relative;
+}
+
+.followup-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+}
+
+.followup-section h2 {
+  color: var(--primary);
+  font-size: 1.1rem;
+  letter-spacing: 2px;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.followup-section h2::before {
+  content: '◈';
+  font-size: 0.8rem;
+}
+
+.followup-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.followup-item {
+  display: flex;
+  gap: 1rem;
+  animation: fadeInUp 0.3s ease;
+}
+
+.followup-item.user {
+  flex-direction: row-reverse;
+}
+
+.followup-label {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid var(--border);
+}
+
+.followup-item.user .followup-label {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.followup-item.assistant .followup-label {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.followup-content {
+  flex: 1;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  line-height: 1.8;
+  font-size: 0.95rem;
+}
+
+.followup-item.user .followup-content {
+  background: rgba(201, 169, 110, 0.05);
+}
+
+.followup-content p {
+  margin-bottom: 0.5rem;
+}
+
+.followup-content p:last-child {
+  margin-bottom: 0;
 }
 
 /* Chart Container */

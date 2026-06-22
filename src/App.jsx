@@ -11,15 +11,21 @@ function App() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [followups, setFollowups] = useState([]);
   const messagesEndRef = useRef(null);
+  const followupsEndRef = useRef(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const scrollToBottom = (ref) => {
+    ref?.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   useEffect(() => {
-    scrollToBottom();
+    scrollToBottom(messagesEndRef);
   }, [messages]);
+
+  useEffect(() => {
+    scrollToBottom(followupsEndRef);
+  }, [followups]);
 
   const handleSend = async () => {
     const text = input.trim();
@@ -32,11 +38,25 @@ function App() {
 
     try {
       if (result) {
-        setResult(null);
-        setMessages(prev => [...prev, {
-          role: 'assistant',
-          content: '好的，让我为你重新排盘。请告诉我你的出生信息。'
-        }]);
+        const question = text;
+        setFollowups(prev => [...prev, { role: 'user', content: question }]);
+
+        const response = await fetch('/api/followup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            question,
+            ziweiData: result.ziweiData,
+            previousAnalysis: result.analysis
+          })
+        });
+
+        const data = await response.json();
+        if (data.error) {
+          setFollowups(prev => [...prev, { role: 'assistant', content: '抱歉，回答出错：' + data.error }]);
+        } else {
+          setFollowups(prev => [...prev, { role: 'assistant', content: data.reply || data.analysis }]);
+        }
         setLoading(false);
         return;
       }
@@ -93,9 +113,10 @@ function App() {
         setMessages(prev => [...prev, { role: 'assistant', content: '排盘出错：' + res.error }]);
       } else {
         setResult(res);
+        setFollowups([]);
         setMessages(prev => [...prev, {
           role: 'assistant',
-          content: '排盘完成！请查看下方命盘和分析结果。如需重新排盘，请发送新的出生信息。'
+          content: '排盘完成！请查看下方命盘和分析结果。如有疑问，可在右侧继续提问。'
         }]);
       }
     } catch (err) {
@@ -105,17 +126,20 @@ function App() {
     }
   };
 
+  const handleNewChart = () => {
+    setResult(null);
+    setFollowups([]);
+    setMessages(prev => [...prev, {
+      role: 'assistant',
+      content: '好的，让我为你重新排盘。请告诉我你的出生信息。'
+    }]);
+  };
+
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
-  };
-
-  const PALACE_ORDER = [0, 1, 2, 3, 11, -1, -1, 4, 10, -1, -1, 5, 9, 8, 7, 6];
-  
-  const GAN_ZHI_MAP = {
-    0: ['命', '兄', '夫', '子', '财', '疾', '迁', '友', '事', '田', '福', '父'],
   };
 
   const renderPalace = (palace, index) => {
@@ -190,7 +214,7 @@ function App() {
               if (palace === null) {
                 if (rowIdx === 1 && colIdx === 1) {
                   return (
-                    <div key={`${rowIdx}-${colIdx}`} className="chart-center" row={rowIdx} col={colIdx}>
+                    <div key={`${rowIdx}-${colIdx}`} className="chart-center">
                       <div className="center-content">
                         <div className="center-gua">☰</div>
                         <div className="center-title">紫微斗数</div>
@@ -205,7 +229,7 @@ function App() {
                 }
                 if (rowIdx === 1 && colIdx === 2) {
                   return (
-                    <div key={`${rowIdx}-${colIdx}`} className="chart-center" row={rowIdx} col={colIdx}>
+                    <div key={`${rowIdx}-${colIdx}`} className="chart-center">
                       <div className="sihua-display">
                         <div className="sihua-title">四化</div>
                         <div className="sihua-grid">
@@ -232,7 +256,7 @@ function App() {
                 }
                 if (rowIdx === 2 && colIdx === 1) {
                   return (
-                    <div key={`${rowIdx}-${colIdx}`} className="chart-center" row={rowIdx} col={colIdx}>
+                    <div key={`${rowIdx}-${colIdx}`} className="chart-center">
                       <div className="gender-display">
                         <span className="gender-icon">{result.ziweiData.gender === 'male' ? '♂' : '♀'}</span>
                         <span className="gender-text">{result.ziweiData.gender === 'male' ? '乾造' : '坤造'}</span>
@@ -242,7 +266,7 @@ function App() {
                 }
                 if (rowIdx === 2 && colIdx === 2) {
                   return (
-                    <div key={`${rowIdx}-${colIdx}`} className="chart-center" row={rowIdx} col={colIdx}>
+                    <div key={`${rowIdx}-${colIdx}`} className="chart-center">
                       <div className="lunar-display">
                         <div className="lunar-label">农历</div>
                         <div className="lunar-month">{result.ziweiData.lunar.monthGanZhi}月</div>
@@ -315,6 +339,7 @@ function App() {
             <section className="result" aria-label="命盘分析结果">
               <div className="result-header">
                 <h2>命盘排布</h2>
+                <button className="btn-new" onClick={handleNewChart}>重新排盘</button>
               </div>
               
               {renderChart()}
@@ -327,40 +352,65 @@ function App() {
                   ))}
                 </div>
               </div>
+
+              {followups.length > 0 && (
+                <div className="followup-section">
+                  <h2>追问记录</h2>
+                  <div className="followup-list">
+                    {followups.map((msg, i) => (
+                      <div key={i} className={`followup-item ${msg.role}`}>
+                        <div className="followup-label">
+                          {msg.role === 'user' ? '问' : '答'}
+                        </div>
+                        <div className="followup-content">
+                          {msg.content.split('\n').map((line, j) => (
+                            <p key={j}>{line}</p>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                    {loading && (
+                      <div className="followup-item assistant">
+                        <div className="followup-label">答</div>
+                        <div className="followup-content typing">
+                          <span></span><span></span><span></span>
+                        </div>
+                      </div>
+                    )}
+                    <div ref={followupsEndRef} />
+                  </div>
+                </div>
+              )}
             </section>
 
             <aside className={`chat-sidebar ${chatOpen ? 'open' : 'collapsed'}`}>
               {!chatOpen ? (
                 <button className="chat-toggle" onClick={() => setChatOpen(true)} aria-label="打开对话">
                   <span className="toggle-icon">💬</span>
-                  <span className="toggle-text">对话</span>
+                  <span className="toggle-text">提问</span>
                 </button>
               ) : (
                 <div className="chat-container sidebar-chat">
                   <div className="chat-header">
-                    <span>AI 对话</span>
+                    <span>追问</span>
                     <button className="chat-close" onClick={() => setChatOpen(false)} aria-label="关闭对话">
                       ×
                     </button>
                   </div>
-                  <div className="messages" role="log" aria-live="polite">
-                    {messages.map((msg, i) => (
-                      <article key={i} className={`message ${msg.role}`}>
-                        <div className="message-content">
-                          {msg.content.split('\n').map((line, j) => (
-                            <p key={j}>{line}</p>
-                          ))}
-                        </div>
-                      </article>
-                    ))}
-                    {loading && (
-                      <div className="message assistant" aria-label="AI 正在思考">
-                        <div className="message-content typing">
-                          <span></span><span></span><span></span>
-                        </div>
+                  <div className="sidebar-messages">
+                    {followups.length === 0 ? (
+                      <div className="sidebar-hint">
+                        <p>有关于此命盘的疑问？</p>
+                        <p>在此输入问题，回答将显示在命盘下方。</p>
+                      </div>
+                    ) : (
+                      <div className="sidebar-preview">
+                        <p>已有 {followups.filter(f => f.role === 'user').length} 条追问</p>
+                        <p className="preview-latest">
+                          最近：{followups[followups.length - 1]?.content.slice(0, 30)}...
+                        </p>
                       </div>
                     )}
-                    <div ref={messagesEndRef} />
                   </div>
 
                   <form className="input-area" onSubmit={(e) => { e.preventDefault(); handleSend(); }}>
@@ -369,11 +419,11 @@ function App() {
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
                       onKeyPress={handleKeyPress}
-                      placeholder="继续提问或输入新信息..."
+                      placeholder="输入追问..."
                       disabled={loading}
-                      aria-label="输入消息"
+                      aria-label="输入追问"
                     />
-                    <button type="submit" disabled={loading || !input.trim()} aria-label="发送消息">
+                    <button type="submit" disabled={loading || !input.trim()} aria-label="发送">
                       发送
                     </button>
                   </form>
