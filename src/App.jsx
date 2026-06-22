@@ -1,64 +1,114 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import './App.css';
 
-const HOUR_OPTIONS = [
-  { value: '子', label: '子时 (23:00-01:00)' },
-  { value: '丑', label: '丑时 (01:00-03:00)' },
-  { value: '寅', label: '寅时 (03:00-05:00)' },
-  { value: '卯', label: '卯时 (05:00-07:00)' },
-  { value: '辰', label: '辰时 (07:00-09:00)' },
-  { value: '巳', label: '巳时 (09:00-11:00)' },
-  { value: '午', label: '午时 (11:00-13:00)' },
-  { value: '未', label: '未时 (13:00-15:00)' },
-  { value: '申', label: '申时 (15:00-17:00)' },
-  { value: '酉', label: '酉时 (17:00-19:00)' },
-  { value: '戌', label: '戌时 (19:00-21:00)' },
-  { value: '亥', label: '亥时 (21:00-23:00)' }
-];
-
-const PALACE_NAMES = ['命宫', '兄弟', '夫妻', '子女', '财帛', '疾厄', '迁移', '交友', '事业', '田宅', '福德', '父母'];
-
 function App() {
-  const [formData, setFormData] = useState({
-    year: 1990,
-    month: 1,
-    day: 1,
-    hour: '子',
-    gender: 'male'
-  });
-  const [result, setResult] = useState(null);
+  const [messages, setMessages] = useState([
+    {
+      role: 'assistant',
+      content: '你好！我是紫微斗数 AI 助手。\n\n请告诉我你的出生信息，比如：\n「1990年3月15日早上8点，男」\n\n💡 提示：请尽量提供准确的出生时辰，因为不同时辰排出的命盘会完全不同。'
+    }
+  ]);
+  const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+  const messagesEndRef = useRef(null);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: name === 'year' || name === 'month' || name === 'day' ? parseInt(value) : value
-    }));
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setResult(null);
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
+  const handleSend = async () => {
+    const text = input.trim();
+    if (!text || loading) return;
+
+    const userMessage = { role: 'user', content: text };
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+    setLoading(true);
+
+    try {
+      if (result) {
+        setResult(null);
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: '好的，让我为你重新排盘。请告诉我你的出生信息。'
+        }]);
+        setLoading(false);
+        return;
+      }
+
+      const response = await fetch('/api/parse-birth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text })
+      });
+
+      const parsed = await response.json();
+
+      if (parsed.error) {
+        setMessages(prev => [...prev, { role: 'assistant', content: '解析出错：' + parsed.error }]);
+      } else {
+        setMessages(prev => [...prev, { role: 'assistant', content: parsed.reply }]);
+
+        if (parsed.year && parsed.month && parsed.day && parsed.hour && parsed.gender) {
+          const data = {
+            year: parsed.year,
+            month: parsed.month,
+            day: parsed.day,
+            hour: parsed.hour,
+            gender: parsed.gender
+          };
+
+          setTimeout(() => {
+            setMessages(prev => [...prev, {
+              role: 'assistant',
+              content: '信息已收到，正在为你排盘...'
+            }]);
+            calculateChart(data);
+          }, 500);
+        }
+      }
+    } catch (err) {
+      setMessages(prev => [...prev, { role: 'assistant', content: '出错了：' + err.message }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calculateChart = async (data) => {
+    setLoading(true);
     try {
       const response = await fetch('/api/calculate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(data)
       });
 
-      const data = await response.json();
-      if (data.error) {
-        alert(data.error);
+      const res = await response.json();
+      if (res.error) {
+        setMessages(prev => [...prev, { role: 'assistant', content: '排盘出错：' + res.error }]);
       } else {
-        setResult(data);
+        setResult(res);
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: '排盘完成！请查看下方命盘和分析结果。如需重新排盘，请发送新的出生信息。'
+        }]);
       }
     } catch (err) {
-      alert('计算出错：' + err.message);
+      setMessages(prev => [...prev, { role: 'assistant', content: '计算出错：' + err.message }]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
     }
   };
 
@@ -99,86 +149,41 @@ function App() {
       </header>
 
       <main>
-        <form onSubmit={handleSubmit} className="form">
-          <div className="form-group">
-            <label>出生年份</label>
+        <div className="chat-container">
+          <div className="messages">
+            {messages.map((msg, i) => (
+              <div key={i} className={`message ${msg.role}`}>
+                <div className="message-content">
+                  {msg.content.split('\n').map((line, j) => (
+                    <p key={j}>{line}</p>
+                  ))}
+                </div>
+              </div>
+            ))}
+            {loading && (
+              <div className="message assistant">
+                <div className="message-content typing">
+                  <span></span><span></span><span></span>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+
+          <div className="input-area">
             <input
-              type="number"
-              name="year"
-              value={formData.year}
-              onChange={handleChange}
-              min="1900"
-              max="2100"
-              required
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder={result ? "发送新信息重新排盘..." : "输入出生信息，如：1990年3月15日早上8点，男"}
+              disabled={loading}
             />
+            <button onClick={handleSend} disabled={loading || !input.trim()}>
+              发送
+            </button>
           </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label>月份</label>
-              <input
-                type="number"
-                name="month"
-                value={formData.month}
-                onChange={handleChange}
-                min="1"
-                max="12"
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label>日期</label>
-              <input
-                type="number"
-                name="day"
-                value={formData.day}
-                onChange={handleChange}
-                min="1"
-                max="31"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label>出生时辰</label>
-            <select name="hour" value={formData.hour} onChange={handleChange}>
-              {HOUR_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label>性别</label>
-            <div className="gender-select">
-              <label className={formData.gender === 'male' ? 'active' : ''}>
-                <input
-                  type="radio"
-                  name="gender"
-                  value="male"
-                  checked={formData.gender === 'male'}
-                  onChange={handleChange}
-                />
-                男
-              </label>
-              <label className={formData.gender === 'female' ? 'active' : ''}>
-                <input
-                  type="radio"
-                  name="gender"
-                  value="female"
-                  checked={formData.gender === 'female'}
-                  onChange={handleChange}
-                />
-                女
-              </label>
-            </div>
-          </div>
-
-          <button type="submit" disabled={loading}>
-            {loading ? '正在排盘...' : '开始排盘'}
-          </button>
-        </form>
+        </div>
 
         {result && (
           <div className="result">
