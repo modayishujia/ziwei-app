@@ -261,70 +261,126 @@ function App() {
     );
   };
 
+  const [chatOpen, setChatOpen] = useState(true);
+
   return (
-    <div className="app">
+    <div className={`app ${result ? 'has-result' : ''}`}>
       <header role="banner">
         <h1>紫微斗数</h1>
         <p>AI 智能命盘分析</p>
       </header>
 
       <main role="main">
-        <section aria-label="AI 对话排盘">
-          <div className="chat-container">
-            <div className="messages" role="log" aria-live="polite">
-              {messages.map((msg, i) => (
-                <article key={i} className={`message ${msg.role}`}>
-                  <div className="message-content">
-                    {msg.content.split('\n').map((line, j) => (
-                      <p key={j}>{line}</p>
-                    ))}
-                  </div>
-                </article>
-              ))}
-              {loading && (
-                <div className="message assistant" aria-label="AI 正在思考">
-                  <div className="message-content typing">
-                    <span></span><span></span><span></span>
-                  </div>
-                </div>
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-
-            <form className="input-area" onSubmit={(e) => { e.preventDefault(); handleSend(); }}>
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder={result ? "发送新信息重新排盘..." : "输入出生信息，如：1990年3月15日早上8点，男"}
-                disabled={loading}
-                aria-label="输入出生信息"
-              />
-              <button type="submit" disabled={loading || !input.trim()} aria-label="发送消息">
-                发送
-              </button>
-            </form>
-          </div>
-        </section>
-
-        {result && (
-          <section className="result" aria-label="命盘分析结果">
-            <div className="result-header">
-              <h2>命盘排布</h2>
-            </div>
-            
-            {renderChart()}
-
-            <div className="analysis">
-              <h2>AI 解盘分析</h2>
-              <div className="analysis-content">
-                {result.analysis.split('\n').map((line, i) => (
-                  <p key={i}>{line}</p>
+        {!result ? (
+          <section aria-label="AI 对话排盘">
+            <div className="chat-container">
+              <div className="messages" role="log" aria-live="polite">
+                {messages.map((msg, i) => (
+                  <article key={i} className={`message ${msg.role}`}>
+                    <div className="message-content">
+                      {msg.content.split('\n').map((line, j) => (
+                        <p key={j}>{line}</p>
+                      ))}
+                    </div>
+                  </article>
                 ))}
+                {loading && (
+                  <div className="message assistant" aria-label="AI 正在思考">
+                    <div className="message-content typing">
+                      <span></span><span></span><span></span>
+                    </div>
+                  </div>
+                )}
+                <div ref={messagesEndRef} />
               </div>
+
+              <form className="input-area" onSubmit={(e) => { e.preventDefault(); handleSend(); }}>
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="输入出生信息，如：1990年3月15日早上8点，男"
+                  disabled={loading}
+                  aria-label="输入出生信息"
+                />
+                <button type="submit" disabled={loading || !input.trim()} aria-label="发送消息">
+                  发送
+                </button>
+              </form>
             </div>
           </section>
+        ) : (
+          <div className="result-layout">
+            <section className="result" aria-label="命盘分析结果">
+              <div className="result-header">
+                <h2>命盘排布</h2>
+              </div>
+              
+              {renderChart()}
+
+              <div className="analysis">
+                <h2>AI 解盘分析</h2>
+                <div className="analysis-content">
+                  {result.analysis.split('\n').map((line, i) => (
+                    <p key={i}>{line}</p>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            <aside className={`chat-sidebar ${chatOpen ? 'open' : 'collapsed'}`}>
+              {!chatOpen ? (
+                <button className="chat-toggle" onClick={() => setChatOpen(true)} aria-label="打开对话">
+                  <span className="toggle-icon">💬</span>
+                  <span className="toggle-text">对话</span>
+                </button>
+              ) : (
+                <div className="chat-container sidebar-chat">
+                  <div className="chat-header">
+                    <span>AI 对话</span>
+                    <button className="chat-close" onClick={() => setChatOpen(false)} aria-label="关闭对话">
+                      ×
+                    </button>
+                  </div>
+                  <div className="messages" role="log" aria-live="polite">
+                    {messages.map((msg, i) => (
+                      <article key={i} className={`message ${msg.role}`}>
+                        <div className="message-content">
+                          {msg.content.split('\n').map((line, j) => (
+                            <p key={j}>{line}</p>
+                          ))}
+                        </div>
+                      </article>
+                    ))}
+                    {loading && (
+                      <div className="message assistant" aria-label="AI 正在思考">
+                        <div className="message-content typing">
+                          <span></span><span></span><span></span>
+                        </div>
+                      </div>
+                    )}
+                    <div ref={messagesEndRef} />
+                  </div>
+
+                  <form className="input-area" onSubmit={(e) => { e.preventDefault(); handleSend(); }}>
+                    <input
+                      type="text"
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder="继续提问或输入新信息..."
+                      disabled={loading}
+                      aria-label="输入消息"
+                    />
+                    <button type="submit" disabled={loading || !input.trim()} aria-label="发送消息">
+                      发送
+                    </button>
+                  </form>
+                </div>
+              )}
+            </aside>
+          </div>
         )}
       </main>
 
