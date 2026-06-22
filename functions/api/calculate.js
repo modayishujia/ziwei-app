@@ -16,7 +16,7 @@ export async function onRequestPost(context) {
     const ziweiData = calculateZiwei(birthData);
     const aiPrompt = formatForAI(ziweiData);
     
-    const aiResponse = await env.AI.run('@cf/qwen/qwen1.5-14b-chat-awq', {
+    const aiResponse = await env.AI.run('@cf/qwen/qwen3-30b-a3b-fp8', {
       messages: [
         {
           role: 'system',
