@@ -116,11 +116,14 @@ function App() {
     const stars = palace.stars || [];
     const isMainPalace = palace.isMinggong;
     const isBodyPalace = palace.isShengong;
+    const starNames = stars.map(s => s.name).join('、') || '无主星';
 
     return (
       <div
         key={index}
         className={`palace ${isMainPalace ? 'minggong' : ''} ${isBodyPalace ? 'shengong' : ''}`}
+        role="cell"
+        aria-label={`${palace.name}：${starNames}`}
       >
         <div className="palace-name">
           {palace.name}
@@ -143,57 +146,60 @@ function App() {
 
   return (
     <div className="app">
-      <header>
+      <header role="banner">
         <h1>紫微斗数</h1>
         <p>AI 智能命盘分析</p>
       </header>
 
-      <main>
-        <div className="chat-container">
-          <div className="messages">
-            {messages.map((msg, i) => (
-              <div key={i} className={`message ${msg.role}`}>
-                <div className="message-content">
-                  {msg.content.split('\n').map((line, j) => (
-                    <p key={j}>{line}</p>
-                  ))}
+      <main role="main">
+        <section aria-label="AI 对话排盘">
+          <div className="chat-container">
+            <div className="messages" role="log" aria-live="polite">
+              {messages.map((msg, i) => (
+                <article key={i} className={`message ${msg.role}`}>
+                  <div className="message-content">
+                    {msg.content.split('\n').map((line, j) => (
+                      <p key={j}>{line}</p>
+                    ))}
+                  </div>
+                </article>
+              ))}
+              {loading && (
+                <div className="message assistant" aria-label="AI 正在思考">
+                  <div className="message-content typing">
+                    <span></span><span></span><span></span>
+                  </div>
                 </div>
-              </div>
-            ))}
-            {loading && (
-              <div className="message assistant">
-                <div className="message-content typing">
-                  <span></span><span></span><span></span>
-                </div>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
 
-          <div className="input-area">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder={result ? "发送新信息重新排盘..." : "输入出生信息，如：1990年3月15日早上8点，男"}
-              disabled={loading}
-            />
-            <button onClick={handleSend} disabled={loading || !input.trim()}>
-              发送
-            </button>
+            <form className="input-area" onSubmit={(e) => { e.preventDefault(); handleSend(); }}>
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder={result ? "发送新信息重新排盘..." : "输入出生信息，如：1990年3月15日早上8点，男"}
+                disabled={loading}
+                aria-label="输入出生信息"
+              />
+              <button type="submit" disabled={loading || !input.trim()} aria-label="发送消息">
+                发送
+              </button>
+            </form>
           </div>
-        </div>
+        </section>
 
         {result && (
-          <div className="result">
+          <section className="result" aria-label="命盘分析结果">
             <div className="basic-info">
               <h2>命盘信息</h2>
               <p>农历：{result.ziweiData.lunar.yearGanZhi}年 {result.ziweiData.lunar.month}月 {result.ziweiData.lunar.day}日</p>
               <p>四化：禄{result.ziweiData.sihua.huaLu} · 权{result.ziweiData.sihua.huaQuan} · 科{result.ziweiData.sihua.huaKe} · 忌{result.ziweiData.sihua.huaJi}</p>
             </div>
 
-            <div className="palace-grid">
+            <div className="palace-grid" role="table" aria-label="十二宫位命盘">
               {result.ziweiData.palaces.map((palace, i) => renderPalace(palace, i))}
             </div>
 
@@ -205,11 +211,11 @@ function App() {
                 ))}
               </div>
             </div>
-          </div>
+          </section>
         )}
       </main>
 
-      <footer>
+      <footer role="contentinfo">
         <p>紫微斗数仅供娱乐参考，不可作为人生决策依据</p>
       </footer>
     </div>
