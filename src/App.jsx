@@ -112,11 +112,20 @@ function App() {
     }
   };
 
+  const PALACE_ORDER = [0, 1, 2, 3, 11, -1, -1, 4, 10, -1, -1, 5, 9, 8, 7, 6];
+  
+  const GAN_ZHI_MAP = {
+    0: ['命', '兄', '夫', '子', '财', '疾', '迁', '友', '事', '田', '福', '父'],
+  };
+
   const renderPalace = (palace, index) => {
     const stars = palace.stars || [];
     const isMainPalace = palace.isMinggong;
     const isBodyPalace = palace.isShengong;
     const starNames = stars.map(s => s.name).join('、') || '无主星';
+
+    const mainStars = stars.filter(s => s.type === '主星');
+    const auxStars = stars.filter(s => s.type === '辅星');
 
     return (
       <div
@@ -125,20 +134,128 @@ function App() {
         role="cell"
         aria-label={`${palace.name}：${starNames}`}
       >
-        <div className="palace-name">
-          {palace.name}
-          {isMainPalace && <span className="tag">命</span>}
-          {isBodyPalace && <span className="tag">身</span>}
+        <div className="palace-header">
+          <span className="palace-name">{palace.name}</span>
+          <div className="palace-tags">
+            {isMainPalace && <span className="tag tag-ming">命</span>}
+            {isBodyPalace && <span className="tag tag-shen">身</span>}
+          </div>
         </div>
-        <div className="stars">
-          {stars.map((star, i) => (
-            <span key={i} className={`star ${star.type} ${star.sihua ? 'sihua' : ''}`}>
-              {star.name}
-              {star.sihua && <span className="sihua-tag">{star.sihua.replace('化', '')}</span>}
-              <span className="brightness">{star.brightness}</span>
-            </span>
-          ))}
-          {stars.length === 0 && <span className="no-star">无主星</span>}
+        
+        <div className="palace-stars">
+          {mainStars.length > 0 && (
+            <div className="star-group main-stars">
+              {mainStars.map((star, i) => (
+                <div key={i} className={`star-item ${star.sihua ? 'has-sihua' : ''}`}>
+                  <span className="star-name">{star.name}</span>
+                  {star.sihua && <span className="sihua-indicator">{star.sihua.replace('化', '')}</span>}
+                  <span className="star-brightness">{star.brightness}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {auxStars.length > 0 && (
+            <div className="star-group aux-stars">
+              {auxStars.map((star, i) => (
+                <span key={i} className="aux-star">{star.name}</span>
+              ))}
+            </div>
+          )}
+          
+          {stars.length === 0 && (
+            <div className="no-star">空宫</div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderChart = () => {
+    if (!result) return null;
+    
+    const palaces = result.ziweiData.palaces;
+    const gridOrder = [
+      [palaces[0], palaces[1], palaces[2], palaces[3]],
+      [palaces[11], null, null, palaces[4]],
+      [palaces[10], null, null, palaces[5]],
+      [palaces[9], palaces[8], palaces[7], palaces[6]]
+    ];
+    
+    return (
+      <div className="chart-container">
+        <div className="chart-grid">
+          {gridOrder.map((row, rowIdx) => 
+            row.map((palace, colIdx) => {
+              if (palace === null) {
+                if (rowIdx === 1 && colIdx === 1) {
+                  return (
+                    <div key={`${rowIdx}-${colIdx}`} className="chart-center" row={rowIdx} col={colIdx}>
+                      <div className="center-content">
+                        <div className="center-gua">☰</div>
+                        <div className="center-title">紫微斗数</div>
+                        <div className="center-info">
+                          <span>{result.ziweiData.lunar.yearGanZhi}年</span>
+                          <span>{result.ziweiData.lunar.month}月{result.ziweiData.lunar.day}日</span>
+                          <span>{result.ziweiData.lunar.hour}时</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+                if (rowIdx === 1 && colIdx === 2) {
+                  return (
+                    <div key={`${rowIdx}-${colIdx}`} className="chart-center" row={rowIdx} col={colIdx}>
+                      <div className="sihua-display">
+                        <div className="sihua-title">四化</div>
+                        <div className="sihua-grid">
+                          <div className="sihua-item lu">
+                            <span className="sihua-label">禄</span>
+                            <span className="sihua-star">{result.ziweiData.sihua.huaLu}</span>
+                          </div>
+                          <div className="sihua-item quan">
+                            <span className="sihua-label">权</span>
+                            <span className="sihua-star">{result.ziweiData.sihua.huaQuan}</span>
+                          </div>
+                          <div className="sihua-item ke">
+                            <span className="sihua-label">科</span>
+                            <span className="sihua-star">{result.ziweiData.sihua.huaKe}</span>
+                          </div>
+                          <div className="sihua-item ji">
+                            <span className="sihua-label">忌</span>
+                            <span className="sihua-star">{result.ziweiData.sihua.huaJi}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+                if (rowIdx === 2 && colIdx === 1) {
+                  return (
+                    <div key={`${rowIdx}-${colIdx}`} className="chart-center" row={rowIdx} col={colIdx}>
+                      <div className="gender-display">
+                        <span className="gender-icon">{result.ziweiData.gender === 'male' ? '♂' : '♀'}</span>
+                        <span className="gender-text">{result.ziweiData.gender === 'male' ? '乾造' : '坤造'}</span>
+                      </div>
+                    </div>
+                  );
+                }
+                if (rowIdx === 2 && colIdx === 2) {
+                  return (
+                    <div key={`${rowIdx}-${colIdx}`} className="chart-center" row={rowIdx} col={colIdx}>
+                      <div className="lunar-display">
+                        <div className="lunar-label">农历</div>
+                        <div className="lunar-month">{result.ziweiData.lunar.monthGanZhi}月</div>
+                      </div>
+                    </div>
+                  );
+                }
+                return <div key={`${rowIdx}-${colIdx}`} className="chart-empty" />;
+              }
+              const palIndex = palaces.indexOf(palace);
+              return <div key={`${rowIdx}-${colIdx}`}>{renderPalace(palace, palIndex)}</div>;
+            })
+          )}
         </div>
       </div>
     );
@@ -193,15 +310,11 @@ function App() {
 
         {result && (
           <section className="result" aria-label="命盘分析结果">
-            <div className="basic-info">
-              <h2>命盘信息</h2>
-              <p>农历：{result.ziweiData.lunar.yearGanZhi}年 {result.ziweiData.lunar.month}月 {result.ziweiData.lunar.day}日</p>
-              <p>四化：禄{result.ziweiData.sihua.huaLu} · 权{result.ziweiData.sihua.huaQuan} · 科{result.ziweiData.sihua.huaKe} · 忌{result.ziweiData.sihua.huaJi}</p>
+            <div className="result-header">
+              <h2>命盘排布</h2>
             </div>
-
-            <div className="palace-grid" role="table" aria-label="十二宫位命盘">
-              {result.ziweiData.palaces.map((palace, i) => renderPalace(palace, i))}
-            </div>
+            
+            {renderChart()}
 
             <div className="analysis">
               <h2>AI 解盘分析</h2>
